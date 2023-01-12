@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.colors
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -162,7 +163,16 @@ class EvaluationIndices():
         }
 
 
+
+
 def show_regression_performance_2d(x, y, title_name):
+    """Density scater plot
+
+    Args:
+        x (float): Prediction
+        y (float): Label
+        title_name (std): fig title
+    """
     x = x.reshape(-1)
     y = y.reshape(-1)
     # Cor. coef
@@ -172,9 +182,18 @@ def show_regression_performance_2d(x, y, title_name):
     with np.errstate(divide='ignore'):
         x = np.log10(x)
         y = np.log10(y)
+    
+    # User defined color map
+    cvals  = [0., 32, 65]
+    colors = ["white", "gold", "red"]
+    norm=plt.Normalize(min(cvals),max(cvals))
+    tuples = list(zip(map(norm,cvals), colors))
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("", tuples)
+
     # plot
-    plt.hist2d(y, x, bins=(55, 55), cmap=cm.jet, range=[[0.01, 1.5], [0.01, 1.5]], vmax=65)
-    plt.colorbar()
+    plt.hist2d(y, x, bins=(55, 55), cmap=cmap, range=[[0.01, 1.5], [0.01, 1.5]], vmax=65)
+    cbar = plt.colorbar(orientation='vertical')
+    cbar.ax.tick_params(labelsize=18)
     plt.ylabel('Pred: Precipitation ($log_{10}$[mm/h])')
     plt.xlabel('Label: Precipitation ($log_{10}$[mm/h])')
     plt.title('{a}'.format(a=title_name))
@@ -333,3 +352,21 @@ def plot_globalmap(data, title, cmap_min, cmap_vmax, cmap_type):
     im = ax.imshow(data, transform=ccrs.PlateCarree(), origin='lower',
                    vmin=cmap_min, vmax=cmap_vmax, cmap=cmap_type)
     plt.colorbar(im, aspect=50,pad=0.03,orientation='horizontal')
+
+
+def plot_hist(pred, label, title):
+    df = pd.DataFrame(np.vstack([pred, label]), index=["pred", "label"]).T
+    
+    plt.figure(figsize=(5.5, 5.5), dpi=300)
+
+    hist2 = sns.histplot(df["label"], bins=np.arange(0, 80, 3), log=True, kde=True, kde_kws={"bw_method":1.1}, line_kws ={'linestyle': '--', 'lw': 3}, ec=None, alpha=.7, color="gray", label="DPR", legend=False)
+    hist1 = sns.histplot(df["pred"], bins=np.arange(0, 80, 3), log=True, kde=True, kde_kws={"bw_method":1.1}, line_kws ={'linestyle': '--', 'lw': 3}, ec=None, alpha=.4, color="blue", label="Estimate", legend=False)
+    plt.xlim([0, 85])
+    plt.ylim([0.8, 10**5])
+    plt.grid(linestyle='dotted', linewidth=1)
+
+    handle1, label1 = hist1.get_legend_handles_labels()
+    handle2, label2 = hist2.get_legend_handles_labels()
+    # plt.legend(handle1 + handle2, label1 + label2)
+    plt.legend(handle1, label1)
+    plt.title(title)
